@@ -7,19 +7,23 @@
 #include "util.h"
 class LinearRegressionModel {
 public:
-    LinearRegressionModel(std::vector<std::vector<float>> trainingDataIn, std::vector<float> trainingDataOut, float learningRate);
+    LinearRegressionModel(std::vector<std::vector<double>> trainingDataIn, std::vector<double> trainingDataOut, double learningRate);
     ~LinearRegressionModel();
-
+    void SetBatchSize(int batch_size);
     void ClearTrainingData();
-    bool Train(float error_margin, int max_epochs);
-    float Predict(std::vector<float> data);
+    bool Train(double error_margin, int max_epochs);
+    double Predict(std::vector<double> data);
 
-    float Predict(std::vector<float> data, std::vector<float> params);
+    double Predict(std::vector<double> data, std::vector<double> params);
 private:
-    float m_LearningRate;
-    std::vector<float> m_Parameters;
-    std::vector<float> m_TrainingDataOut;
-    std::vector<std::vector<float>> m_TrainingDataIn;
+    std::vector<std::vector<double>> GenTrainingBatch();
+
+
+    int m_BatchSize;
+    double m_LearningRate;
+    std::vector<double> m_Parameters;
+    std::vector<double> m_TrainingDataOut;
+    std::vector<std::vector<double>> m_TrainingDataIn;
 
 
 

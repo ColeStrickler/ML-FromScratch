@@ -1,31 +1,29 @@
 
 #include <stdlib.h>
 #include "model.h"
+#include "data.h"
 
 
 int main(int argc, char** argv)
 {
-    std::vector<std::vector<float>> train_in = {
-        {2, 4},
-        {6, 12},
-        {9, 3},
-        {11, 1},
-        {6, 7}
-    };
-    std::vector<float> train_out = {
-        12,
-        36,
-        24,
-        24,
-        26
-    };
+    
+    std::vector<std::vector<double>> train_in(data_in.begin() + 20, data_in.end());
+    std::vector<double> train_out(data_out.begin() + 20, data_out.end());
 
 
-    auto model = LinearRegressionModel(train_in, train_out, 0.0002f);
+    auto model = LinearRegressionModel(train_in, train_out, 0.000007396f);
+    //model.SetBatchSize(0);
+    model.Train(0.000000001f, 1000000);
 
-    model.Train(0.0000000001f, 100000000);
 
-    printf("Prediction: %.3f\n", model.Predict({4.0f, 4.0f}));
+
+    for (int i = 0; i < 20; i++)
+    {
+        auto prediction = model.Predict(data_in[i]);
+        printf("Prediction: %.3f\n", prediction);
+        printf("Actual: %.3f, Error: %.3f\n", train_out[i], abs(prediction - train_out[i])/train_out[i] * 100.0f);
+    }
+    
 
 
 }
