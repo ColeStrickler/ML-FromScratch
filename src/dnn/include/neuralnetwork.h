@@ -16,12 +16,34 @@ enum LayerType
 
 };
 
+template<typename T, typename Func>
+std::vector<T> applyToEach(const std::vector<T>& vec, Func f) {
+    std::vector<T> result;
+    result.reserve(vec.size());
+    std::transform(vec.begin(), vec.end(), std::back_inserter(result), f);
+    return result;
+}
+
+template<typename T, typename Func>
+std::vector<T> applyToEachManual(T* vec, int vecSize, Func f) {
+    std::vector<T> result;
+    result.reserve(vecSize);
+    for (int i = 0; i < vecSize; i++)
+        result[i] = f(vec[i]);
+    return result;
+}
+
+
 
 inline float sigmoid(float val)
 {
     return 1.0f/(1.0 + std::exp(-val));
 }
 
+inline float sigmoid_prime(float val)
+{
+    return sigmoid(val)*(1-sigmoid(val));
+}
 
 class RandomFloatGenerator {
 public:
@@ -45,7 +67,9 @@ struct LayerActivation
 {
     int size;
     float* activations;
+    float* z;
 };
+
 
 
 
@@ -57,6 +81,7 @@ public:
     virtual ~NetworkLayer() = default;  // Always add virtual destructor for base classes
     virtual LayerActivation GetLayerActivation() = 0; // pure virtual 
     virtual std::vector<int> GetDimensions() = 0;
+    virtual float GetWeight(int src_neuron, int dst_neuron) = 0;
 };
 
 
@@ -70,20 +95,27 @@ public:
      void SetWeights(float* data, int size);
      void SetBiases(float* data, int size);
     
+
+    float GetWeight(int src_neuron, int dst_neuron) override;
     std::vector<int> GetDimensions() override;
-     LayerActivation GetLayerActivation() override;
+    LayerActivation GetLayerActivation() override;
+
+    
     
 private:
     int m_InputSize;
     int m_LayerSize;
-    float* m_Weights;
-    float* m_Activation;
+    std::vector<float> m_Weights;
+    std::vector<float> m_Activation;
+    std::vector<float> z;
 };
 
 
-
-
-
+struct BackPropResult
+{
+    std::vector<std::vector<std::vector<float>>> gradient;
+    std::vector<std::vector<float>> bias_gradient;
+};
 
 class NeuralNetwork
 {
@@ -93,17 +125,20 @@ public:
 
 
     void SGD(std::vector<std::vector<float>> &training_data, int epochs, int mini_batch_size, int eta, const std::vector<std::vector<float>> &test_data);
-    void UpdateMiniBatch(const std::vector<std::vector<float>>& mini_batch, int eta);    
+    void UpdateMiniBatch(const std::vector<std::pair<int, std::vector<float>>> &mini_batch, int eta);   
     std::vector<LayerActivation> FeedforwardTrain(std::vector<float>& input_instance);
 
 
     int Inference(std::vector<float>& input_instance);
     std::vector<float> Evaluate(const std::vector<std::vector<float>> &test_data);
 private:
-    std::vector<std::unique_ptr<NetworkLayer>> m_Layers;
-    void Backpropagation(std::vector<float>& input_instance);
-    
 
+    std::vector<std::unique_ptr<NetworkLayer>> m_Layers;
+    BackPropResult Backpropagation(std::vector<float>& input_instance, int label);
+    std::vector<float> BaseCostDerivative(LayerActivation output_layer_activation, int label);
+    std::vector<std::vector<std::vector<float>>> AllocGradientStorage();
+    std::vector<std::vector<float>> AllocBiasGradientStorage();
+    float GetWeight(int layer, int dst_neuron, int src_neuron);
 };
 
 
