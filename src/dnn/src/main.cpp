@@ -236,14 +236,54 @@ int getGuess(const LayerActivation& output_layer, int ncategories)
     return guess;
 }
 
+int get_mnist_image_count(const std::string& filename) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file) {
+        std::cerr << "Cannot open file: " << filename << std::endl;
+        return -1;
+    }
+
+    file.seekg(4);  // skip magic number
+
+    int32_t num_images = 0;
+    file.read(reinterpret_cast<char*>(&num_images), 4);
+
+    // MNIST uses big-endian format; convert if on little-endian system
+    num_images = __builtin_bswap32(num_images);
+
+    return num_images;
+}
+
+
+std::vector<std::pair<int, std::vector<float>>> MakeDataSet(std::string filename, std::string labels)
+{
+    std::vector<std::pair<int, std::vector<float>>> ret;
+    auto count = get_mnist_image_count(filename);
+
+    for (int i = 0; i < count; i++)
+    {
+        std::vector<float> image = loadMNISTImage(filename, i);
+        int label = readLabel(labels, i);
+        ret.push_back(std::make_pair(label, image));
+    }
+
+    return ret;
+}
+
+
+
 int main() {
 
-    std::string filename = "t10k-images-idx3-ubyte/t10k-images-idx3-ubyte";
-    std::string labels = "t10k-labels-idx1-ubyte/t10k-labels-idx1-ubyte";
+    std::string train = "train-images-idx3-ubyte/train-images-idx3-ubyte";
+    std::string train_labels = "train-labels-idx1-ubyte/train-labels-idx1-ubyte";
+    std::string test = "t10k-images-idx3-ubyte/t10k-images-idx3-ubyte";
+    std::string test_labels = "t10k-labels-idx1-ubyte/t10k-labels-idx1-ubyte";
 
-   
+   auto train_set = MakeDataSet(train, train_labels);
+   auto test_set = MakeDataSet(test, test_labels);
 
-
+    assert(train_set.size());
+    assert(test_set.size());
     
 
 
@@ -254,26 +294,34 @@ int main() {
     try {
         H5File file(weights, H5F_ACC_RDONLY);
         
-        auto layers = processDenseLayers(file);
+        //auto layers = processDenseLayers(file);
+
+
+        std::vector<std::unique_ptr<NetworkLayer>> layers;
+        layers.push_back(std::make_unique<DenseLayer>(256, 784));
+        layers.push_back(std::make_unique<DenseLayer>(128, 256));
+        layers.push_back(std::make_unique<DenseLayer>(10, 128));
+
         NeuralNetwork network(layers);
+        
 
-        for (int i = 0; i < total; i++)
-        {
-            std::vector<float> image = loadMNISTImage(filename, i);
-            int label = readLabel(labels, i);
-            if (image.empty())
-            {
-                std::cout << "image load fail\n";
-                return -1;
-            }
-
-           int guess = network.Inference(image);
- 
-            if (guess == label)
-                correct++;
-            
-        }
-        printf("Score %d/%d\n", correct, total);
+        network.SGD(train_set, 25, 64, 0.1f, test_set);
+        
+        
+        //for (int i = 0; i < total; i++)
+        //{
+        //    std::vector<float> image = loadMNISTImage(filename, i);
+        //    int label = readLabel(labels, i);
+        //    if (image.empty())
+        //    {
+        //        std::cout << "image load fail\n";
+        //        return -1;
+        //    }
+        //   int guess = network.Inference(image);
+        //    if (guess == label)
+        //        correct++;
+        //}
+        //printf("Score %d/%d\n", correct, total);
 
     } catch (FileIException& e) {
         e.printErrorStack();

@@ -2,7 +2,7 @@
 
 
 CC=g++
-CC_FLAGS=-std=c++17 -O3 -L/usr/lib/x86_64-linux-gnu/hdf5/serial/ -lhdf5_cpp -lhdf5
+CC_FLAGS=-std=c++17 -O3 -L/usr/lib/x86_64-linux-gnu/hdf5/serial/ -lhdf5_cpp -lhdf5 -g #-fsanitize=address 
 SRC_DIR=./src/
 BUILD_DIR=./build/
 SRCS=$(shell find $(SRC_DIR) -type f -name "*.cpp")

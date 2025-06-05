@@ -15,10 +15,6 @@ with tf.device('/GPU:0'):
     model = models.Sequential([
         layers.Input(shape=(784,)),
         layers.Dense(256, activation='sigmoid'),
-        layers.Dense(256, activation='sigmoid'),
-        layers.Dense(256, activation='sigmoid'),
-        layers.Dense(128, activation='sigmoid'),
-        layers.Dense(128, activation='sigmoid'),
         layers.Dense(128, activation='sigmoid'),
         layers.Dense(10, activation='sigmoid')
     ])

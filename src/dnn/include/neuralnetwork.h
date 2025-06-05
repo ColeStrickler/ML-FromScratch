@@ -26,8 +26,7 @@ std::vector<T> applyToEach(const std::vector<T>& vec, Func f) {
 
 template<typename T, typename Func>
 std::vector<T> applyToEachManual(T* vec, int vecSize, Func f) {
-    std::vector<T> result;
-    result.reserve(vecSize);
+    std::vector<T> result(vecSize);
     for (int i = 0; i < vecSize; i++)
         result[i] = f(vec[i]);
     return result;
@@ -37,19 +36,32 @@ std::vector<T> applyToEachManual(T* vec, int vecSize, Func f) {
 
 inline float sigmoid(float val)
 {
-    return 1.0f/(1.0 + std::exp(-val));
+    auto ret = 1.0f/(1.0 + std::exp(-val));
+    //printf("sigmoid %.2f\n", ret);
+    return ret;
 }
 
 inline float sigmoid_prime(float val)
 {
-    return sigmoid(val)*(1-sigmoid(val));
+    auto ret = sigmoid(val)*(1-sigmoid(val));
+    //printf("sigmoid_prime %.2f\n", ret);
+    return ret;
 }
 
 class RandomFloatGenerator {
 public:
     // Generate a random float in [min, max)
-    static float get(float min = 0.0f, float max = 1.0f) {
+    static float get(float min = -1.0f, float max = 1.0f) {
         std::uniform_real_distribution<float> dist(min, max);
+        return dist(getEngine());
+    }
+
+
+    static float xavier(int in_size, int out_size)
+    {
+        // For a layer with n_in inputs and n_out outputs:
+        float limit = 4*std::sqrt(6.0f / (in_size + out_size));
+        std::uniform_real_distribution<float> dist(-limit, limit);
         return dist(getEngine());
     }
 
@@ -81,7 +93,8 @@ public:
     virtual ~NetworkLayer() = default;  // Always add virtual destructor for base classes
     virtual LayerActivation GetLayerActivation() = 0; // pure virtual 
     virtual std::vector<int> GetDimensions() = 0;
-    virtual float GetWeight(int src_neuron, int dst_neuron) = 0;
+    virtual float GetWeight(int dst_neuron, int src_neuron) = 0;
+    virtual void SetWeight(int dst_neuron, int src_neuron, float value) = 0;
 };
 
 
@@ -96,12 +109,10 @@ public:
      void SetBiases(float* data, int size);
     
 
-    float GetWeight(int src_neuron, int dst_neuron) override;
+    float GetWeight(int dst_neuron, int src_neuron) override;
+    void SetWeight(int dst_neuron, int src_neuron, float value) override;
     std::vector<int> GetDimensions() override;
     LayerActivation GetLayerActivation() override;
-
-    
-    
 private:
     int m_InputSize;
     int m_LayerSize;
@@ -124,13 +135,14 @@ public:
     ~NeuralNetwork();
 
 
-    void SGD(std::vector<std::vector<float>> &training_data, int epochs, int mini_batch_size, int eta, const std::vector<std::vector<float>> &test_data);
-    void UpdateMiniBatch(const std::vector<std::pair<int, std::vector<float>>> &mini_batch, int eta);   
+    void SGD(std::vector<std::pair<int, std::vector<float>>> &training_data, int epochs, int mini_batch_size, float learning_rate, \
+        const std::vector<std::pair<int, std::vector<float>>> &test_data);
+    void UpdateMiniBatch(const std::vector<std::pair<int, std::vector<float>>> &mini_batch, float learning_rate);   
     std::vector<LayerActivation> FeedforwardTrain(std::vector<float>& input_instance);
 
 
     int Inference(std::vector<float>& input_instance);
-    std::vector<float> Evaluate(const std::vector<std::vector<float>> &test_data);
+    int Evaluate(const std::vector<std::pair<int, std::vector<float>>> &test_data);
 private:
 
     std::vector<std::unique_ptr<NetworkLayer>> m_Layers;
@@ -139,6 +151,9 @@ private:
     std::vector<std::vector<std::vector<float>>> AllocGradientStorage();
     std::vector<std::vector<float>> AllocBiasGradientStorage();
     float GetWeight(int layer, int dst_neuron, int src_neuron);
+
+
+    void SetWeight(int layer, int dst_neuron, int src_neuron, float value);
 };
 
 
